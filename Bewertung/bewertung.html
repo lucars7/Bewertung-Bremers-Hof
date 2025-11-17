@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kundenbewertung</title>
+<style>
+  :root{
+    --fg:#0a0a0a; --muted:#6b7280; --panel:#ffffff; --border:#e5e7eb; --bg:#f5f5f7;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    color:var(--fg); background:radial-gradient(40% 60% at 50% 0%,#fff,var(--bg));
+    display:flex; min-height:100svh; align-items:center; justify-content:center;
+  }
+  .wrap{width:min(760px,92vw); padding:28px}
+  header{display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; margin-bottom:18px}
+  .logoRing{
+    height:116px; width:116px; border-radius:999px; border:1px solid var(--border);
+    background:#f3f4f6; display:grid; place-items:center; overflow:hidden; user-select:none;
+  }
+  .logoRing img{height:100%; width:100%; object-fit:cover; display:block}
+  .logoFallback{font-weight:700; color:#9ca3af; font-size:22px; letter-spacing:.06em}
+  h1{margin:0; font-size:28px; font-weight:800; letter-spacing:-.02em}
+  .sub{margin:2px 0 0; color:var(--muted); font-size:15px}
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:22px;
+    box-shadow:0 8px 30px rgba(0,0,0,.04);
+  }
+  .center{text-align:center}
+  .muted{color:var(--muted)}
+  .stars{display:flex; justify-content:center; gap:14px; user-select:none}
+  .starBtn{
+    border:0; background:none; padding:0; cursor:pointer; line-height:0; border-radius:12px;
+    transition:transform .12s ease;
+  }
+  .starBtn:active{transform:scale(.96)}
+  .note{height:22px; margin-top:8px; font-size:13px; color:var(--muted)}
+  .chipRow{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
+  .chip{
+    border:1px solid var(--border); background:#f8fafc; padding:6px 10px; border-radius:999px; font-size:13px; cursor:pointer;
+  }
+  .chip.on{background:#0a0a0a; color:#fff; border-color:#0a0a0a}
+  textarea{
+    width:100%; min-height:110px; resize:vertical; padding:10px 12px;
+    border:1px solid var(--border); border-radius:12px; font-size:14px;
+    outline:none;
+  }
+  .row{display:flex; align-items:center; gap:10px; justify-content:space-between}
+  .btn{
+    border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:10px; font-size:13px; cursor:pointer;
+  }
+  .btn.primary{background:#0a0a0a; color:#fff; border-color:#0a0a0a}
+  .thank{
+    display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; padding:30px 0;
+  }
+  .ok{height:56px; width:56px; border-radius:999px; background:#e8f9ee; color:#16a34a; display:grid; place-items:center; font-size:26px; font-weight:800}
+  .mt8{margin-top:8px} .mt12{margin-top:12px} .mt16{margin-top:16px}
+  .hidden{display:none}
+  /* accessibility focus */
+  .starBtn:focus-visible, .btn:focus-visible, .chip:focus-visible { outline:3px solid #c7d2fe; outline-offset:2px }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logoRing" id="logoRing">
+        <img id="logoImg" alt="Logo">
+        <div class="logoFallback hidden" id="logoFallback">BH</div>
+      </div>
+      <div>
+        <h1 id="companyName">Bremers Hof - Markt</h1>
+        <p class="sub">Ihre Erfahrung in 2 Klicks</p>
+      </div>
+    </header>
+
+    <div class="panel" id="viewRate">
+      <div class="center">
+        <p class="muted">Wie war Ihr Besuch?</p>
+        <div class="stars" id="stars"></div>
+        <div class="note" id="note">Tippen oder klicken Sie auf die Sterne</div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="viewFeedback">
+      <div class="row">
+        <button class="btn" id="backBtn">← Zurück</button>
+        <p style="margin:0;font-weight:600;">Was können wir verbessern?</p>
+      </div>
+      <div class="mt12 chipRow" id="chips"></div>
+      <textarea class="mt12" id="message" placeholder="Beschreiben Sie kurz, was verbessert werden kann..."></textarea>
+      <div class="row mt12">
+        <span class="muted" style="font-size:12px">Ihre Angaben werden per E-Mail übermittelt</span>
+        <button class="btn primary" id="sendBtn">Feedback senden</button>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="viewManual">
+      <div class="center">
+        <p class="muted">Dein Browser blockiert automatische Weiterleitungen.</p>
+        <button class="btn primary mt8" id="openManually">Google-Bewertung öffnen</button>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="viewThanks">
+      <div class="thank">
+        <div class="ok">✓</div>
+        <div>
+          <div style="font-weight:700;">Vielen Dank für Ihr Feedback!</div>
+          <div class="muted" style="font-size:14px">Wir schauen uns Ihre Rückmeldung an und verbessern uns stetig.</div>
+        </div>
+        <button class="btn primary" id="againBtn">Weitere Bewertung abgeben</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ======= KONFIG ======= */
+const COMPANY_NAME = "Bremers Hof - Markt";
+const SUPPORT_EMAIL = "luca.preissler@icloud.com";
+
+/* Desktop/Android: dein vorhandener Google-Link */
+const GOOGLE_REVIEW_URL =
+  "https://www.google.com/search?hl=de-DE&gl=de&q=Bremehr%27s+Hof-Markt,+Schmiedestrang+33,+33415+Verl&ludocid=16327698794860307333&lsig=AB86z5Xchsxq-PAVvacaYTAruvgl#lrd=0x47ba3a78286bc529:0xe297a38bcb38e385,3";
+
+/* iPhone/iPad: direkter Schreib-Dialog */
+const IOS_REVIEW_URL =
+  "https://search.google.com/local/writereview?placeid=ChIJKcVrKHg6ukcRheM4y4ujl-I";
+
+/* Logo – am besten lokal in /public/logo.jpg, hier Beispiel-URL: */
+const LOGO_URL = "./logo.jpg";
+
+/* ======= STATE ======= */
+let rating = 0;
+let hover = 0;
+let blockedURL = "";
+
+/* ======= ELEMENTE ======= */
+const elLogoImg = document.getElementById("logoImg");
+const elLogoFallback = document.getElementById("logoFallback");
+const elCompanyName = document.getElementById("companyName");
+const viewRate = document.getElementById("viewRate");
+const viewFeedback = document.getElementById("viewFeedback");
+const viewManual = document.getElementById("viewManual");
+const viewThanks = document.getElementById("viewThanks");
+const starsBox = document.getElementById("stars");
+const note = document.getElementById("note");
+const chipsBox = document.getElementById("chips");
+const msg = document.getElementById("message");
+const backBtn = document.getElementById("backBtn");
+const sendBtn = document.getElementById("sendBtn");
+const againBtn = document.getElementById("againBtn");
+const openManually = document.getElementById("openManually");
+
+/* ======= INIT ======= */
+elCompanyName.textContent = COMPANY_NAME;
+if (LOGO_URL) {
+  elLogoImg.src = LOGO_URL;
+  elLogoImg.addEventListener("error", () => {
+    // Wenn externes Bild nicht lädt → Fallback-Buchstaben, aber runder Platz bleibt
+    elLogoImg.classList.add("hidden");
+    elLogoFallback.classList.remove("hidden");
+    elLogoFallback.textContent = initials(COMPANY_NAME);
+  });
+} else {
+  elLogoImg.classList.add("hidden");
+  elLogoFallback.classList.remove("hidden");
+  elLogoFallback.textContent = initials(COMPANY_NAME);
+}
+
+const topics = ["Qualität","Freundlichkeit","Kommunikation","Preis-Leistung","Sauberkeit"];
+const selected = new Set();
+topics.forEach(t => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = t;
+  b.addEventListener("click", () => {
+    if (selected.has(t)) { selected.delete(t); b.classList.remove("on"); }
+    else { selected.add(t); b.classList.add("on"); }
+  });
+  chipsBox.appendChild(b);
+});
+
+/* Sterne aufbauen */
+[1,2,3,4,5].forEach(i => {
+  const btn = document.createElement("button");
+  btn.className = "starBtn";
+  btn.setAttribute("aria-label", i + " Sterne");
+  btn.innerHTML = starSVG();
+  btn.addEventListener("mouseenter", () => { hover = i; paintStars(); note.textContent = `${i} / 5`; });
+  btn.addEventListener("mouseleave", () => { hover = 0; paintStars(); if (!rating) note.textContent = "Tippen oder klicken Sie auf die Sterne"; else note.textContent = `${rating} / 5`; });
+  btn.addEventListener("click", () => handleRate(i));
+  starsBox.appendChild(btn);
+});
+paintStars();
+
+/* ======= FUNKTIONEN ======= */
+function initials(name){
+  const parts = name.split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0] || "B") + (parts[1]?.[0] || "H");
+}
+
+function starSVG(){
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+    width="48" height="48" fill="currentColor" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+      d="M11.48 3.5c.27-.69 1.23-.69 1.5 0l1.62 4.16c.14.37.5.62.9.62h4.45c.74 0 1.05.95.45 1.38l-3.6 2.6c-.32.23-.45.63-.33 1l1.37 4.29c.22.7-.57 1.28-1.16.85l-3.74-2.7a1 1 0 0 0-1.16 0l-3.74 2.7c-.59.43-1.38-.15-1.16-.85l1.37-4.28c.12-.37-.01-.77-.33-1.01l-3.6-2.6c-.6-.43-.29-1.38.45-1.38h4.45c.4 0 .76-.25.9-.62l1.62-4.16Z" />
+  </svg>`;
+}
+
+function paintStars(){
+  const active = hover || rating;
+  [...starsBox.children].forEach((btn, idx) => {
+    const i = idx + 1;
+    const color = getColor(i, hover, rating);
+    btn.style.color = color.fg;
+    btn.style.filter = active >= i ? "brightness(1.15)" : "brightness(0.85)";
+  });
+}
+
+/* Farb-Logik wie besprochen (blass → kräftig bei Hover/Active) */
+function getColor(i, hov, sel){
+  const on = (hov || sel) >= i, over = hov >= i;
+  // Basisfarbsets
+  const palette = {
+    1: { soft:"#fee2e2", strong:"#f87171" },     // rot
+    2: { soft:"#ffedd5", strong:"#fb923c" },     // orange
+    3: { soft:"#fef9c3", strong:"#facc15" },     // gelb
+    4: { soft:"#dcfce7", strong:"#4ade80" },     // mattes grün
+    5: { soft:"#bbf7d0", strong:"#22c55e" },     // kräftiger grün
+    g: { soft:"#f5f5f5", strong:"#bfbfbf" }      // grau
+  };
+  const which = hov ? hov : sel ? sel : 0;
+  let set = palette.g;
+  if (which===1) set = palette[1];
+  else if (which===2) set = palette[2];
+  else if (which===3) set = palette[3];
+  else if (which===4) set = palette[4];
+  else if (which===5) set = palette[5];
+  return { fg: on ? (over? set.strong : set.strong) : set.soft };
+}
+
+/* leichte Verzögerung (ca. 350ms), damit Farbe sichtbar bleibt */
+function handleRate(value){
+  rating = value; paintStars(); note.textContent = `${rating} / 5`;
+  setTimeout(() => {
+    if (value >= 4) {
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const target = isIOS ? IOS_REVIEW_URL : GOOGLE_REVIEW_URL;
+      openGoogleSafe(target);
+    } else {
+      show(viewFeedback);
+      hide(viewRate, viewManual, viewThanks);
+    }
+  }, 350);
+}
+
+/* robustes Öffnen mit Fallback-Button */
+function openGoogleSafe(url){
+  try {
+    if (window.top === window.self) {
+      window.location.assign(url);
+      return;
+    }
+  } catch (e) { /* cross-origin iframe – ignoriere */ }
+
+  const a = document.createElement("a");
+  a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.style.display="none";
+  document.body.appendChild(a);
+  const ok = a.dispatchEvent(new MouseEvent("click", { bubbles:true, cancelable:true }));
+  a.remove();
+  if (ok) return;
+
+  blockedURL = url;
+  show(viewManual); hide(viewRate, viewFeedback, viewThanks);
+}
+
+openManually.addEventListener("click", () => {
+  window.open(blockedURL || GOOGLE_REVIEW_URL, "_blank", "noopener,noreferrer");
+});
+
+/* Feedback-Flow */
+backBtn.addEventListener("click", () => {
+  show(viewRate); hide(viewFeedback, viewManual, viewThanks);
+  // optional: reset Auswahl
+});
+
+sendBtn.addEventListener("click", () => {
+  const subject = enc(`Feedback (${rating} Sterne) – ${[...selected].join(" / ")}`);
+  const body = enc(
+`Bewertung: ${rating} Sterne
+Ausgewählte Punkte: ${[...selected].join(", ")}
+
+Nachricht:
+${msg.value}`.trim());
+  window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+  msg.value = "";
+  selected.clear();
+  [...chipsBox.children].forEach(ch => ch.classList.remove("on"));
+  rating = 0; hover = 0; paintStars(); note.textContent = "Tippen oder klicken Sie auf die Sterne";
+  show(viewThanks); hide(viewRate, viewFeedback, viewManual);
+});
+
+againBtn.addEventListener("click", () => {
+  show(viewRate); hide(viewThanks, viewFeedback, viewManual);
+});
+
+function show(el){ el.classList.remove("hidden"); }
+function hide(...els){ els.forEach(e => e.classList.add("hidden")); }
+function enc(s){ return encodeURIComponent(s); }
+</script>
+</body>
+</html>
