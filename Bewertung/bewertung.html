@@ -119,6 +119,9 @@
 /* ======= KONFIG ======= */
 const COMPANY_NAME = "Bremers Hof - Markt";
 const SUPPORT_EMAIL = "luca.preissler@icloud.com";
+// Zum automatischen Versand wird der kostenlose Dienst formsubmit.co genutzt.
+// Alternativ kannst du EMAIL_ENDPOINT auf einen eigenen Server ändern.
+const EMAIL_ENDPOINT = `https://formsubmit.co/ajax/${encodeURIComponent(SUPPORT_EMAIL)}`;
 
 /* Desktop/Android: dein vorhandener Google-Link */
 const GOOGLE_REVIEW_URL =
@@ -285,21 +288,59 @@ backBtn.addEventListener("click", () => {
   // optional: reset Auswahl
 });
 
-sendBtn.addEventListener("click", () => {
-  const subject = enc(`Feedback (${rating} Sterne) – ${[...selected].join(" / ")}`);
-  const body = enc(
-`Bewertung: ${rating} Sterne
-Ausgewählte Punkte: ${[...selected].join(", ")}
+sendBtn.addEventListener("click", handleSend);
 
-Nachricht:
-${msg.value}`.trim());
-  window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+async function handleSend(){
+  if (!rating) {
+    note.textContent = "Bitte zuerst eine Sternebewertung auswählen";
+    note.style.color = "#f87171";
+    setTimeout(() => {
+      note.style.color = "";
+      note.textContent = rating ? `${rating} / 5` : "Tippen oder klicken Sie auf die Sterne";
+    }, 2200);
+    return;
+  }
+
+  const payload = {
+    _subject: `Feedback (${rating} Sterne) – ${[...selected].join(" / ") || "Allgemein"}`,
+    Bewertung: `${rating} Sterne`,
+    Themen: [...selected].join(", ") || "Keine Auswahl",
+    Nachricht: msg.value.trim() || "(keine Nachricht)",
+    Unternehmen: COMPANY_NAME
+  };
+
+  try {
+    setSending(true);
+    const res = await fetch(EMAIL_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Fehler beim Versand");
+    await res.json();
+    resetForm();
+    show(viewThanks); hide(viewRate, viewFeedback, viewManual);
+  } catch (err) {
+    console.error(err);
+    alert("Das Feedback konnte nicht gesendet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt per E-Mail.");
+  } finally {
+    setSending(false);
+  }
+}
+
+function resetForm(){
   msg.value = "";
   selected.clear();
   [...chipsBox.children].forEach(ch => ch.classList.remove("on"));
-  rating = 0; hover = 0; paintStars(); note.textContent = "Tippen oder klicken Sie auf die Sterne";
-  show(viewThanks); hide(viewRate, viewFeedback, viewManual);
-});
+  rating = 0; hover = 0; paintStars();
+  note.textContent = "Tippen oder klicken Sie auf die Sterne";
+}
+
+function setSending(state){
+  sendBtn.disabled = state;
+  sendBtn.classList.toggle("busy", state);
+  sendBtn.textContent = state ? "Senden..." : "Feedback senden";
+}
 
 againBtn.addEventListener("click", () => {
   show(viewRate); hide(viewThanks, viewFeedback, viewManual);
@@ -307,7 +348,6 @@ againBtn.addEventListener("click", () => {
 
 function show(el){ el.classList.remove("hidden"); }
 function hide(...els){ els.forEach(e => e.classList.add("hidden")); }
-function enc(s){ return encodeURIComponent(s); }
 </script>
 </body>
 </html>
